@@ -9,7 +9,7 @@ all: cart.crt
 aa.prg:
 	./extract_interpreter.py
 
-cart.crt : loader.prg aa.prg build_crt.py
+cart.crt : loader.prg disk.prg aa.prg build_crt.py
 	./build_crt.py -o $@ aa.prg
 
 clean:

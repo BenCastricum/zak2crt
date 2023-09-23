@@ -38,11 +38,24 @@ raw_rom = bytearray()
 
 with open("loader.prg", 'rb') as file:
     rom = file.read()
-    roms.append({ 'description': "loader.prg", 'data' : rom[2:] })
+    roms.append({ 'description': "loader.prg", 'data' : rom[2:], 'offset': rom[0]+256*rom[1] })
 
 with open(filename, 'rb') as file:
+    rom_d = { 'description': filename }
     rom = file.read()
-    roms.append({ 'description': filename, 'data' : rom[2:] })
+    rom_d['offset'] = rom[0] + 256 * rom[1]
+    rom = bytearray(rom[2:])
+    with open("disk.prg", 'rb') as file:
+        patch = file.read()
+        real_offset = patch[0] + 256 * patch[1]
+        patch = patch[2:]
+        rom_offset = real_offset - rom_d['offset']
+        print("Appling patch at offset $%04X" % rom_offset)
+        rom[rom_offset:rom_offset+len(patch)] = patch
+    rom_d['data'] = rom
+    roms.append(rom_d)
+
+
 
 with open("disks/SIDE1.D64", 'rb') as file:
     rom = file.read()

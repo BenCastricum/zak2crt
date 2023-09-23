@@ -49,8 +49,6 @@ warmstart
 copy2ram
     lda ramcode,y
     sta $0380,y
-    lda sectorcode,y
-    sta $F000,Y
     iny
     cpy #$80
     bne copy2ram
@@ -90,40 +88,8 @@ next
     bne loop1
     lda #$80		; hide cartridge banks
     sta $de00
-    lda #$4c		; insert jmp $f000
-    sta $3bf8
-    lda #$00
-    sta $3bf9
-    lda #$f0
-    sta $3bfa
     cli
     jmp $0400
-
-sectorcode
-    stx $3cdd		; original instruction on $3BF8
-    dex                 ; tracks start at $01 so decrement by 1
-    txa
-    asl			; times 2, we need to lookup in an array of words
-    tax
-    clc
-    lda track_offsets,x
-    adc $3CDE		; add sector
-    sta $FE
-    lda track_offsets+1,x
-    adc #$00
-    sta $FF
-    ldx $3cdd
-    jmp $3bfb
-; we still need to add the offset of the disk image in the rom
-
-
-
-
-
-track_offsets
-    .word 0, 21, 42, 63, 84, 105, 126, 147, 168, 189, 210, 231, 252, 273, 294
-    .word 315, 336, 357, 376, 395, 414, 433, 452, 471, 490, 508, 526, 544, 562
-    .word 580, 598, 615, 632, 649, 666
 
     * = $83ff
     .byte 0

@@ -1,0 +1,23 @@
+
+We cannot use a routine located in basic or kernal rom space to copy cart contents.
+
+https://www.lemon64.com/forum/viewtopic.php?t=76283
+http://harries.dk/files/C64MemoryMaps.pdf
+
+The games uses interrupts to force a splitscreen, also while loading from disk.
+
+The ISR table at $0300 is overwritten by the sectors read from disk.
+
+We cannot leave interrupts on while reading from cartridge because we need to
+enable kernal rom as well, which in its turn uses the overwritten ISR vector
+at $0314.
+
+
+Current issues:
+
+Loading/Saving of games is not working anymore. Probably due to some code
+being overwritten by the disk emulation code. Need to find a place to put
+the code safely.
+
+Game shows glitches while loading. Caused by the interupt being disabled 
+causing timing issues with the splitscreen.
