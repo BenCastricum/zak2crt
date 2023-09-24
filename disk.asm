@@ -37,27 +37,47 @@ check2
     adc #$1B		; Disk 2 starts at bank 27
 
 setbank
-    sei
     sta $de00
     pla
     and #$1f
     clc
     adc #$80
-    sta $ff
-    ldy #$00
-    sty $fe
-    lda $01
-    pha
-    lda #$37
-    sta $01
-l3
-    lda ($fe),y
-    sta $0300,y
-    iny
-    bne l3
+    sta romloc+2
+    lda #$00
+    sta romloc+1
+waitvsync
+    ldy #$15
+    sty $01
+    cli
+;   sta $d020
+waitlastscanline
+    lda $d011
+    and #$80
+    bne go
+    lda $d012
+    cmp #$10
+    bcs waitlastscanline
 
-    pla
-    sta $01
+go
+;   inc $d020
+    ldx #$17
+    sei
+    stx $01
+l3
+romloc
+    lda $1234
+secloc
+    sta $0300
+    inc romloc+1
+    inc secloc+1
+    beq done
+    lda romloc+1
+    and #$0f
+    beq waitvsync
+    bne l3
+done
+    sty $01
+;   dec $d020
     lda #$80		; hide cartridge banks
     sta $de00
     cli

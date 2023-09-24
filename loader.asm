@@ -34,23 +34,22 @@ loop0
     jsr $fd15 ;Init I/O
     ; TODO , replace jsr below wit http://downloads.rgcd.co.uk/projects/c64/howto.txt
     ; register documentation : http://www.zimmers.net/cbmpics/cbm/c64/vic-ii.txt
-    jsr $ff5b ;Init video
+    ; jsr $ff5b ;Init video
+    ldx #$2f
+loop
+    lda vic_regs_data, x
+    sta $d000, x
+    dex
+    bpl loop
+    jsr $e51b
 
 warmstart
-    ; wait for vsync
-    lda $d011
-    and #$80
-    ora $d012
-    bne warmstart
-
-    sta $d020
-    sta $d011
-    tay
+    ldx #$00
 copy2ram
-    lda ramcode,y
-    sta $0380,y
-    iny
-    cpy #$80
+    lda ramcode,x
+    sta $0380,x
+    inx
+    cpx #$80
     bne copy2ram
     jmp $0380
 
@@ -90,6 +89,12 @@ next
     sta $de00
     cli
     jmp $0400
+
+vic_regs_data
+.byte $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00, $00
+.byte $00, $0b, $00, $00, $00, $00, $c8, $00, $15, $71, $f0, $00, $00, $00, $00, $00
+;border colors 0,0 and then the spritecolors (just 4 bit anyway).
+.byte $00, $00, $f1, $f2, $f3, $f4, $f0, $f1, $f2, $f3, $f4, $f5, $f6, $f7, $fc, $ff
 
     * = $83ff
     .byte 0

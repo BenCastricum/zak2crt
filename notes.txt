@@ -21,3 +21,5 @@ the code safely.
 
 Game shows glitches while loading. Caused by the interupt being disabled 
 causing timing issues with the splitscreen.
+A workaround could be loading only when vic is drawing upper/lower border
+but that may have different results and PAL/NTSC.
