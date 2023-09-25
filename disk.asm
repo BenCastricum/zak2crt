@@ -43,50 +43,52 @@ setbank
     clc
     adc #$80
     sta romloc+2
-    lda #$00
-    sta romloc+1
+    ldy #$00
+    sty romloc+1
+
 waitvsync
-    ldy #$15
-    sty $01
-    cli
-;   sta $d020
-waitlastscanline
-    lda $d011
-    and #$80
-    bne go
+    lda $d011		; If negative,  VIC is in the border
+    bmi go
     lda $d012
-    cmp #$10
-    bcs waitlastscanline
+    cmp #$10		; also use the first few scanlines of a new screen
+    bcs waitvsync
 
 go
 ;   inc $d020
-    ldx #$17
+    lda #$17
+    ldx #$10		; amount of bytes to copy per loop
     sei
-    stx $01
-l3
+    sta $01
+
+copybyte
 romloc
-    lda $1234
-secloc
-    sta $0300
-    inc romloc+1
-    inc secloc+1
-    beq done
-    lda romloc+1
-    and #$0f
-    beq waitvsync
-    bne l3
+    lda $1200,y         ; 5 cycles
+    sta $0300,y         ; 5 cycles
+    iny                 ; 2 cycles
+    beq done            ; 2 cycles
+    dex                 ; 2 cycles
+    bne copybyte        ; 3 cycles
+; 19 cycles to copy 1 byte using absolute,y adressing mode
+
+    lda #$15
+    sta $01
+    cli
+;   stx $d020
+    bne waitvsync
+
 done
-    sty $01
-;   dec $d020
+    lda #$15
+    sta $01
     lda #$80		; hide cartridge banks
     sta $de00
     cli
+;   sty $d020
 
     clc			; Clear Carry bit indicates successful read
     rts
 
 error
-    lda #$03
+    lda #$02
     sta $d020
     jmp *-3
 

@@ -19,7 +19,7 @@ Loading/Saving of games is not working anymore. Probably due to some code
 being overwritten by the disk emulation code. Need to find a place to put
 the code safely.
 
-Game shows glitches while loading. Caused by the interupt being disabled 
-causing timing issues with the splitscreen.
-A workaround could be loading only when vic is drawing upper/lower border
-but that may have different results and PAL/NTSC.
+Game shows glitches while loading. Caused by the interupt being disabled
+causing timing issues with the splitscreen. We currently work around this by
+loading sectors while the vic is drawing the borders. On PAL this seems to
+work, on NTSC it still glitches. There's not much border on NTSC systems.
