@@ -12,14 +12,14 @@ We cannot leave interrupts on while reading from cartridge because we need to
 enable kernal rom as well, which in its turn uses the overwritten ISR vector
 at $0314.
 
+Another solution might be to move the put make the current interrupt at $FFFE
+callable with kernel rom enabled by redirecting it to a new code that
+changes $01 to #$15, reads the interupt vector at $fffe, calls that interrupt
+when done, restore $01 with previous value ($17 most likely) and continues
+For this to work we still need to address the issue that the sector data is
+stored at $0300-$03ff
 
-Current issues:
+The original disk handling code should remain useable, which means we need to
+find a new (unused) space for our code. When the game request disk '0' then
+call the original code. Disk 0 a load/save game disk apparently.
 
-Loading/Saving of games is not working anymore. Probably due to some code
-being overwritten by the disk emulation code. Need to find a place to put
-the code safely.
-
-Game shows glitches while loading. Caused by the interupt being disabled
-causing timing issues with the splitscreen. We currently work around this by
-loading sectors while the vic is drawing the borders. On PAL this seems to
-work, on NTSC it still glitches. There's not much border on NTSC systems.
