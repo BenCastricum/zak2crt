@@ -2,88 +2,87 @@
     * = $3BF8
 
 
-    stx $3cdd		; original instruction on $3BF8
-    sty $3cde
-    dex                 ; tracks start at $01 so decrement by 1
-    txa
-    asl			; times 2, we need to lookup in an array of words
-    tax
-    clc
-    lda track_offsets,x
-    adc $3CDE		; add sector
-    sta $FE
-    lda track_offsets+1,x
-    adc #$00
-    sta $FF
+    lda $d011           ; wait for VIC to draw borders
+    bpl *-3
 
-    lda $fe             ; divide offset by 32 to get bank nr.
-    pha
-    ldx #$05
-l2
-    ror $ff
-    ror a
-    dex
-    bne l2
-    ldx $FE7B
-    cpx #$31		; disk 1?
-    bne check2
-    clc
-    adc #$05		; Disk 1 starts at bank 5
-    bcc setbank
-check2
-    cpx #$32		; disk 2?
-    bne error
-    clc
-    adc #$1B		; Disk 2 starts at bank 27
+    lda $fe7b		; save requested disk
+    sta $fd
 
-setbank
-    sta $de00
-    pla
-    and #$1f
-    clc
-    adc #$80
-    sta romloc+2
-    ldy #$00
-    sty romloc+1
+    ; redirect ISR
+    lda #<isrpre
+    sta $0314
+    sta $0316
+    lda #>isrpre
+    sta $0315
+    sta $0317
 
-waitvsync
-    lda $d011		; If negative,  VIC is in the border
-    bmi go
-    lda $d012
-    cmp #$10		; also use the first few scanlines of a new screen
-    bcs waitvsync
+    lda #$00
+    sta $de00		; we switch in bank 0 for code
 
-go
-;   inc $d020
     lda #$17
-    ldx #$10		; amount of bytes to copy per loop
-    sei
     sta $01
 
-copybyte
-romloc
-    lda $1200,y         ; 5 cycles
+    ; $fd contains disk (either '1', or '2')
+    ; x contains track
+    ; y contains sector
+    jsr $8100		; call init_read from loader.asm
+    ; y contains bank
+    ; a contains offset (high byte)
+
+    sty $de00
+    sta romloc1+2
+    sta romloc2+2
+    sta romloc3+2
+    ldy #$18
+
+romloc1
+    lda $8000,y         ; 5 cycles
     sta $0300,y         ; 5 cycles
     iny                 ; 2 cycles
-    beq done            ; 2 cycles
+    bne romloc1         ; 3 cycles
+
+    ldy #$13
+romloc2
+    lda $8000,y         ; 5 cycles
+    sta $0300,y         ; 5 cycles
+    dey                 ; 2 cycles
+    bpl romloc2         ; 3 cycles
+
+    ; sector copy almost done, restore compensation
+    lda $d011
+    bpl *-3
+
+    inc $0ce8		; $42
+    inc $0d96		; $4F
+    inc $0dd4		; $59
+    inc $0e22		; $63
+    inc $0e60		; $6D
+    inc $0eae		; $77
+    inc $0eec		; $81
+    inc $0f3a		; $8B
+    inc $0f78		; $95
+    inc $0fc6		; $9F
+    inc $1004		; $A9
+    inc $1052		; $B1
+    inc $1090		; $BD
+    inc $10de		; $C3
+    inc $113a		; $FB
+
+    ; copy the last 4 bytes
+    ldy #$14
+    ldx #$04
+    sei
+romloc3
+    lda $8000,y         ; 5 cycles
+    sta $0300,y         ; 5 cycles
+    iny                 ; 2 cycles
     dex                 ; 2 cycles
-    bne copybyte        ; 3 cycles
-; 19 cycles to copy 1 byte using absolute,y adressing mode
+    bne romloc3         ; 3 cycles
+
 
     lda #$15
     sta $01
     cli
-;   stx $d020
-    bne waitvsync
-
-done
-    lda #$15
-    sta $01
-    lda #$80		; hide cartridge banks
-    sta $de00
-    cli
-;   sty $d020
-
     clc			; Clear Carry bit indicates successful read
     rts
 
@@ -92,9 +91,36 @@ error
     sta $d020
     jmp *-3
 
+; The screen is rendered line-by-line and each line takes exactly 63 clock cycles.
 
+; code from kernal rom 
+;   pha			; 3 cycles
+;   txa			; 2 cycles
+;   pha			; 3 cycles
+;   tya			; 2 cycles
+;   pha			; 3 cycles
+;   tsx			; 2 cycles
+;   lda $0104,x		; 4 cycles
+;   and #$10		; 2 cycles
+;   beq $ff58		; 3 cycles (assuming normal interrupt)
+;   jmp ($0316)		; 5 cycles
+;   jmp ($0314)		; 5 cycles
+; this codes adds 34 cycles
 
-track_offsets
-    .word 0, 21, 42, 63, 84, 105, 126, 147, 168, 189, 210, 231, 252, 273, 294
-    .word 315, 336, 357, 376, 395, 414, 433, 452, 471, 490, 508, 526, 544, 562
-    .word 580, 598, 615, 632, 649, 666
+isrpre
+    lda $01		; 2 cycles
+    pha                 ; 3 cyccle
+    lda #$15		; 2 cycles
+    sta $01		; 3 cycles
+    lda #>isrpost	; 2 cycles
+    pha			; 3 cycles
+    lda #<isrpost	; 2 cycles
+    pha			; 3 cycles
+    php			; 3 cycles
+    jmp ($fffe)		; 5 cycles
+; this codes adds 28 cycles
+
+isrpost
+    pla
+    sta $01
+    jmp $ea7e
